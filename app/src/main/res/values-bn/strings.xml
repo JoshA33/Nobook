@@ -29,4 +29,13 @@
     <string name="hide_sponsored_ads_from_your_feed">ফিড থেকে স্পন্সরড বিজ্ঞাপন লুকান</string>
     <string name="enable_download_button_on_media_view">মিডিয়া ভিউতে ডাউনলোড বোতাম চালু করুন</string>
     <string name="nobook_settings">Nobook সেটিংস</string>
+    <string name="copy_to_clipboard_title">ক্লিপবোর্ডে কপি করুন</string>
+    <string name="image_copied_to_clipboard">ছবি ক্লিপবোর্ডে কপি করা হয়েছে</string>
+    <string name="copy_failed_invalid_data">কপি করা যায়নি: অবৈধ ডেটা</string>
+    <string name="copy_failed_invalid_image">কপি করা যায়নি: অবৈধ ছবি</string>
+    <string name="failed_to_copy_image">ছবি কপি করা যায়নি</string>
+    <string name="clipboard_not_supported">এই সংস্করণে ক্লিপবোর্ড সমর্থিত নয়</string>
+    <string name="enable_copy_to_clipboard_button_on_media_view">মিডিয়া দেখার সময় ক্লিপবোর্ডে কপি করার বোতাম চালু করুন</string>
+    <string name="not_supported">সমর্থিত নয়</string>
+
 </resources>

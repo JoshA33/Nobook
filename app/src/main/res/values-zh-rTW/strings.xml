@@ -29,4 +29,12 @@
     <string name="hide_sponsored_ads_from_your_feed">隱藏動態中的廣告</string>
     <string name="enable_download_button_on_media_view">在媒體檢視中啟用下載按鈕</string>
     <string name="nobook_settings">Nobook 設定</string>
+    <string name="copy_to_clipboard_title">複製到剪貼簿</string>
+    <string name="image_copied_to_clipboard">圖片已複製到剪貼簿</string>
+    <string name="copy_failed_invalid_data">複製失敗：資料無效</string>
+    <string name="copy_failed_invalid_image">複製失敗：圖片無效</string>
+    <string name="failed_to_copy_image">無法複製圖片</string>
+    <string name="clipboard_not_supported">此版本不支援剪貼簿</string>
+    <string name="enable_copy_to_clipboard_button_on_media_view">在媒體檢視中啟用複製到剪貼簿按鈕</string>
+    <string name="not_supported">不支援</string>
 </resources>

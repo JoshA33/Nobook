@@ -1,36 +1,4 @@
 (function() {
-
-    if (isDesktopMode()) {
-        (function() {
-          const selector = 'div.sponsored_ad, article[data-ft*="sponsored_ad"]';
-
-          const removeSponsored = (root = document) => {
-            root.querySelectorAll(selector).forEach(el => el.remove());
-          };
-
-          removeSponsored();
-
-          const observer = new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-              for (const node of mutation.addedNodes) {
-                if (!(node instanceof HTMLElement)) continue;
-                if (node.matches(selector)) {
-                  node.remove();
-                } else {
-                  removeSponsored(node);
-                }
-              }
-            }
-          });
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true
-          });
-        })();
-
-        return;
-    }
-
     const sponsoredTexts = [
         "Sponsored", "Ad", "Gesponsert", "Sponsorlu", "Sponsorowane",
         "Ispoonsara godhameera", "Geborg", "Bersponsor", "Ditaja",
@@ -48,8 +16,53 @@
         "ලද ලද ලද", "สนับสนุน สนับสนุน รับ สนับสนุน สนับสนุน",
         "ကြော်ငြာ ကြော်ငြာ", "ឧបត្ថម្ភ ឧបត្ថម្ភ ឧបត្ថម្ភ", "광고",
         "贊助", "赞助内容", "広告", "സ്‌പോൺസർ ചെയ്‌തത്",
-        "Anzeige","Peye","Oglas"
+        "Anzeige","Peye","Oglas", "مُموَّل", "ممَوَّل", "ممول", "ได้รับการสนับสนุน", "สนับสนุน"
     ];
+
+    const normalizeLabel = text => text.normalize('NFKC').replace(/[\u064B-\u065F\u200B-\u200F\u202A-\u202E]/g, '').trim().toLowerCase();
+    const sponsoredLabels = new Set(sponsoredTexts.map(normalizeLabel));
+    function containsSponsoredText(text) {
+        return sponsoredLabels.has(normalizeLabel(text.replaceAll('󰞋', '')));
+    }
+
+
+    if (isDesktopMode()) {
+        (function() {
+          const selector = 'div.sponsored_ad, article[data-ft*="sponsored_ad"]';
+
+          const removeSponsored = (root = document) => {
+            root.querySelectorAll(selector).forEach(el => { el.style.display = 'none'; });
+            // Inspect explicit ad labels, not arbitrary words inside post captions.
+            root.querySelectorAll('[role="article"]').forEach(article => {
+              const labels = article.querySelectorAll('a[aria-label], a[href*="/ads/"], a[href*="/ad_about/"]');
+              if (Array.from(labels).some(label => containsSponsoredText(label.getAttribute('aria-label') || label.textContent))) {
+                article.style.display = 'none';
+              }
+            });
+          };
+
+          removeSponsored();
+
+          const observer = new MutationObserver(mutations => {
+            for (const mutation of mutations) {
+              for (const node of mutation.addedNodes) {
+                if (!(node instanceof HTMLElement)) continue;
+                if (node.matches(selector)) {
+                  node.style.display = 'none';
+                } else {
+                  removeSponsored(node.closest('[role="article"]')?.parentElement || node);
+                }
+              }
+            }
+          });
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+        })();
+
+        return;
+    }
 
     const specialChar = '󰞋';
 
@@ -62,7 +75,7 @@
         containers.forEach(container => {
             const spans = container.querySelectorAll(textSelector);
             for (const span of spans) {
-                if (sponsoredRegex.test(span.textContent)) {
+                if (sponsoredRegex.test(span.textContent) || containsSponsoredText(span.textContent)) {
                     container.style.display = 'none';
                     break;
                 }
@@ -89,19 +102,13 @@
 
     hideAllAds();
 
-    const observer = new MutationObserver(hideAllAds);
+    let pending = false;
+    const observer = new MutationObserver(() => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => { pending = false; hideAllAds(); });
+    });
     observer.observe(document.body, { childList: true, subtree: true });
-
-    function containsSponsoredText(text) {
-        const lowerText = text.toLowerCase();
-        return sponsoredTexts.some(word => {
-            const lowerWord = word.toLowerCase();
-            // Use word boundary regex to match whole words only
-            const wordBoundaryRegex = new RegExp(`\\b${lowerWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-            return wordBoundaryRegex.test(lowerText);
-        });
-    }
-
 
     function removeReelAds(root = document) {
         const containers = root.querySelectorAll('div.vertically-snappable');

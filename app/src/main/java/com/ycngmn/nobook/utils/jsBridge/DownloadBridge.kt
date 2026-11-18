@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -17,19 +19,20 @@ import java.io.File
 import java.io.FileOutputStream
 
 class DownloadBridge(private val context: Context) {
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private fun notify(message: Int) {
+        mainHandler.post { Toast.makeText(context, context.getString(message), Toast.LENGTH_SHORT).show() }
+    }
+
     @JavascriptInterface
     fun downloadBase64File(base64Data: String, mimeType: String) {
         runCatching {
             if (!base64Data.contains(",")) {
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.download_failed_invalid_data),
-                    Toast.LENGTH_SHORT
-                ).show()
+                notify(R.string.download_failed_invalid_data)
                 return
             }
 
-            val data = Base64.decode(base64Data.split(",")[1], Base64.DEFAULT)
+            val data = Base64.decode(base64Data.substringAfter(','), Base64.DEFAULT)
 
             // Determine if it's an image or video
             val isImage = mimeType.startsWith("image/")
@@ -42,6 +45,7 @@ class DownloadBridge(private val context: Context) {
                     if (bitmap != null) {
                         val outputStream = ByteArrayOutputStream()
                         bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                        bitmap.recycle()
                         Triple(outputStream.toByteArray(), "image/png", "png")
                     } else {
                         // If bitmap decoding fails, use original data
@@ -72,39 +76,27 @@ class DownloadBridge(private val context: Context) {
                 }
 
                 val resolver = context.contentResolver
-                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-
-                uri?.let {
-                    resolver.openOutputStream(it)?.use { outputStream ->
-                        outputStream.write(finalData)
-                    }
+                val uri = requireNotNull(resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues))
+                try {
+                    requireNotNull(resolver.openOutputStream(uri)).use { it.write(finalData) }
                     contentValues.clear()
                     contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
-                    resolver.update(uri, contentValues, null, null)
-
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.saved_to_downloads),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    check(resolver.update(uri, contentValues, null, null) > 0)
+                } catch (error: Exception) {
+                    resolver.delete(uri, null, null)
+                    throw error
                 }
+                notify(R.string.saved_to_downloads)
+
             } else {
                 val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 val file = File(downloadsDir, fileName)
 
                 FileOutputStream(file).use { it.write(finalData) }
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.saved_to_downloads),
-                    Toast.LENGTH_SHORT
-                ).show()
+                notify(R.string.saved_to_downloads)
             }
         }.onFailure {
-            Toast.makeText(
-                context,
-                context.getString(R.string.failed_to_save_file),
-                Toast.LENGTH_SHORT
-            ).show()
+            notify(R.string.failed_to_save_file)
         }
     }
 }

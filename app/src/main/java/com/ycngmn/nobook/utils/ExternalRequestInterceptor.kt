@@ -14,10 +14,8 @@ class ExternalRequestInterceptor(
         navigator: WebViewNavigator
     ): WebRequestInterceptResult {
 
-        val internalUrlRegex = Regex(
-            """https?://(?!(?:l|lm)\.)[^/]*(?:facebook|messenger)\.com/.*"""
-        )
-        return if (internalUrlRegex.containsMatchIn(request.url) && request.isForMainFrame) {
+        // Subframe navigations must never launch another app.
+        return if (!request.isForMainFrame || isInternalUrl(request.url)) {
             WebRequestInterceptResult.Allow
         } else {
             handleExternalUrl(fbRedirectSanitizer(request.url))

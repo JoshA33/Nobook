@@ -178,7 +178,15 @@
 
   updateText();
 
-  new MutationObserver(updateText).observe(document.body, {
+  new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches('.native-text')) makeSelectable(node);
+        node.querySelectorAll('.native-text').forEach(makeSelectable);
+      }
+    }
+  }).observe(document.body, {
     childList: true,
     subtree: true
   });
@@ -195,10 +203,7 @@
     applyOverlayStyle();
 
     const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.addedNodes.length)
-                applyOverlayStyle();
-        });
+        if (mutations.some(mutation => mutation.addedNodes.length)) applyOverlayStyle();
     });
 
     observer.observe(document.body, {
@@ -345,18 +350,21 @@ observer.observe(document.body, { childList: true, subtree: true });
     }
 })();
 
-// File Download Script
+// Download only explicit blob download links, never upload previews or MediaSource URLs.
 (function() {
     if (window._downloadBridgeInitialized) return;
     window._downloadBridgeInitialized = true;
-    const originalCreateObjectURL = URL.createObjectURL;
-    URL.createObjectURL = function(blob) {
-        const reader = new FileReader();
-        reader.onloadend = function() {
-            if (reader.result)
-                DownloadBridge.downloadBase64File(reader.result, blob.type);
-        };
-        reader.readAsDataURL(blob);
-        return originalCreateObjectURL(blob);
-    };
+    document.addEventListener('click', async event => {
+        const link = event.target.closest?.('a[download]');
+        if (!link || !link.href.startsWith('blob:') || !window.DownloadBridge) return;
+        event.preventDefault();
+        try {
+            const response = await fetch(link.href);
+            if (!response.ok) throw new Error('Download failed');
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onload = () => window.DownloadBridge.downloadBase64File(reader.result, blob.type);
+            reader.readAsDataURL(blob);
+        } catch (error) { console.error('Nobook download failed', error); }
+    }, true);
 })();

@@ -29,4 +29,13 @@
     <string name="hide_sponsored_ads_from_your_feed">إخفاء الإعلانات الممولة من المحتوى</string>
     <string name="enable_download_button_on_media_view">تفعيل زر التنزيل عند عرض الوسائط</string>
     <string name="nobook_settings">إعدادات Nobook</string>
+    <string name="copy_to_clipboard_title">نسخ إلى الحافظة</string>
+    <string name="image_copied_to_clipboard">تم نسخ الصورة إلى الحافظة</string>
+    <string name="copy_failed_invalid_data">فشل النسخ: بيانات غير صالحة</string>
+    <string name="copy_failed_invalid_image">فشل النسخ: صورة غير صالحة</string>
+    <string name="failed_to_copy_image">تعذر نسخ الصورة</string>
+    <string name="clipboard_not_supported">الحافظة غير مدعومة في هذا الإصدار</string>
+    <string name="enable_copy_to_clipboard_button_on_media_view">تفعيل زر النسخ إلى الحافظة عند عرض الوسائط</string>
+    <string name="not_supported">غير مدعوم</string>
+
 </resources>

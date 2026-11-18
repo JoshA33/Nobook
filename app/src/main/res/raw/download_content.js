@@ -55,49 +55,33 @@
   // Utility functions
   const debugLog = (...args) => CONFIG.debug && console.log("[ContentDownloader]", ...args);
 
-  const isElementVisible = (element) => {
+  const visibleArea = element => {
     const rect = element.getBoundingClientRect();
-    return (
-      rect.top >= 0 &&
-      rect.left >= 0 &&
-      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
-    );
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return 0;
+    return Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0)) *
+      Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
   };
-
-
-  // Find the appropriate container for the content
-  const findContentContainer = (element) => {
-    if (!element) return null;
-
+  const isElementVisible = element => visibleArea(element) > 0;
+  const mediaUrl = element => element.currentSrc || element.src || element.querySelector('source[src]')?.src || '';
+  const findContentContainer = element => {
     for (const selector of SELECTORS.containers) {
-      const container = element.closest(selector);
+      const container = element?.closest(selector);
       if (container) return container;
     }
-
-    return element.parentElement;
+    return element?.parentElement;
   };
-
-  // Get the current visible media element
   const getCurrentMediaElement = () => {
-    // Try each selector in order of priority
-    for (const selector of SELECTORS.mediaElements) {
-      const elements = document.querySelectorAll(selector);
-
-      // Find the first visible element
-      for (const element of elements) {
-        if (isElementVisible(element) && element.src) {
-          return element;
-        }
-      }
-    }
-
-    // Fallback: look for any large visible media
-    return Array.from(
-      document.querySelectorAll('video:not([hidden]), img[src*="fbcdn"]:not([width="16"]):not([hidden])')
-    ).find(el => {
-      const rect = el.getBoundingClientRect();
-      return isElementVisible(el) && rect.width > 150 && rect.height > 150 && el.src;
-    });
+    const videos = Array.from(document.querySelectorAll('video:not([hidden])'))
+      .filter(isElementVisible).sort((a, b) => visibleArea(b) - visibleArea(a));
+    // Never substitute an avatar or poster when a video is loading/unavailable.
+    if (videos.length) return videos[0];
+    if (/\/(reel|reels|videos|watch)(\/|$)/.test(location.pathname)) return null;
+    return Array.from(document.querySelectorAll('img[src*="fbcdn"]:not([hidden])'))
+      .filter(el => {
+        const rect = el.getBoundingClientRect();
+        return rect.width >= 150 && rect.height >= 150 && isElementVisible(el);
+      }).sort((a, b) => visibleArea(b) - visibleArea(a))[0];
   };
 
   // Check if we are in a story or reel view
@@ -126,98 +110,33 @@
     return false;
   };
 
-  // Download media from URL
-  const downloadMedia = (url) => {
-    fetch(url)
-      .then(response => response.blob())
-      .then(blob => {
-        if (window.DownloadBridge && window.DownloadBridge.downloadBase64File) {
-          const reader = new FileReader();
-          reader.onloadend = function() {
-            if (reader.result) {
-              window.DownloadBridge.downloadBase64File(
-                reader.result,
-                blob.type || "image/jpeg"
-              );
-            }
-          };
-          reader.readAsDataURL(blob);
-        }
-      })
-      .catch(err => {
-        console.error("Error downloading media:", err);
-      });
-  };
-
-  // Extract and download videos or images
-  const extractAndDownloadMedia = () => {
-    // Find current media element
-    const mediaElement = getCurrentMediaElement();
-
-    if (mediaElement && mediaElement.src && mediaElement.src !== lastDownloadedUrl) {
-      downloadMedia(mediaElement.src);
-      lastDownloadedUrl = mediaElement.src;
-      return;
-    }
-
-    // Get container to search in
-    const container = currentContentContainer || document.body;
-
-    // Find videos first
-    const videoElement = container.querySelector("video:not([hidden])");
-    if (videoElement && videoElement.src && videoElement.src !== lastDownloadedUrl) {
-      downloadMedia(videoElement.src);
-      lastDownloadedUrl = videoElement.src;
-      return;
-    }
-
-    // If no video, try with images
-    const images = Array.from(container.querySelectorAll("img"))
-      .filter(img =>
-        img.src &&
-        !img.src.includes("data:image") &&
-        img.src !== lastDownloadedUrl
-      )
-      .filter(img => {
-        const rect = img.getBoundingClientRect();
-        return rect.width >= 100 && rect.height >= 100 && isElementVisible(img);
-      })
-      .sort((a, b) => {
-        const areaA = a.getBoundingClientRect().width * a.getBoundingClientRect().height;
-        const areaB = b.getBoundingClientRect().width * b.getBoundingClientRect().height;
-        return areaB - areaA; // Largest first
-      });
-
-    if (images.length > 0) {
-      downloadMedia(images[0].src);
-      lastDownloadedUrl = images[0].src;
-      return;
-    }
-
-    // Try background images as last resort
-    const backgroundElements = Array.from(container.querySelectorAll("*"));
-
-    for (const el of backgroundElements) {
-      const style = window.getComputedStyle(el);
-      const bgImage = style.backgroundImage;
-
-      if (
-        bgImage &&
-        bgImage !== "none" &&
-        (bgImage.includes("fbcdn.net") || bgImage.includes("fbsbx.com"))
-      ) {
-        const imageUrl = bgImage.replace(/^url\(['"](.+)['"]\)$/, "$1");
-
-        if (imageUrl !== lastDownloadedUrl) {
-          downloadMedia(imageUrl);
-          lastDownloadedUrl = imageUrl;
-          return;
-        }
+  let downloadInProgress = false;
+  const extractAndDownloadMedia = async () => {
+    if (downloadInProgress) return;
+    const media = getCurrentMediaElement();
+    const url = media && mediaUrl(media);
+    if (!url) { window.alert('This media is not ready to download. Try playing it first.'); return; }
+    downloadInProgress = true;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const blob = await response.blob();
+      if (!blob.size) throw new Error('Empty media');
+      if (media.tagName === 'VIDEO' && !blob.type.startsWith('video/')) {
+        throw new Error('No downloadable video source');
       }
-    }
-
-    // Nothing found
-    debugLog("No media content found to download");
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+      if (!window.DownloadBridge?.downloadBase64File) throw new Error('Download bridge unavailable');
+      window.DownloadBridge.downloadBase64File(data, blob.type || 'application/octet-stream');
+    } catch (error) {
+      console.error('Nobook download failed', error);
+      window.alert('Unable to download this media. Streaming video may not have a downloadable source.');
+    } finally { downloadInProgress = false; }
   };
 
   // Create and manage download button
@@ -348,6 +267,16 @@
     }
   };
 
+  let scheduled = false;
+  const scheduleProcess = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; processPage(); });
+  };
+  window.addEventListener('scroll', scheduleProcess, { passive: true });
+  window.addEventListener('resize', scheduleProcess);
+  window.addEventListener('popstate', scheduleProcess);
+
   // Initialize
   const init = () => {
     // Reset state
@@ -366,7 +295,7 @@
             (mutation.target.tagName === "VIDEO" ||
              mutation.target.tagName === "IMG"))
       );
-      if (hasRelevantChanges) processPage();
+      if (hasRelevantChanges) scheduleProcess();
     });
 
     observer.observe(document.body, {

@@ -1,4 +1,9 @@
 # Nobook
+
+This is JoshA33's unofficial maintenance fork of [ycngmn/Nobook](https://github.com/ycngmn/Nobook).
+The 0.1.2-dev update improves downloads, navigation, script loading and ad detection, with regression tests and CI.
+See [maintenance notes and remaining issues](MAINTENANCE.md). Messenger currently works in **Desktop layout**; mobile-layout messaging remains unsupported.
+
 <p align="center">
   <img src='images/nobook_github_cover.png' height='200' alt="nobook_cover">
 </p>

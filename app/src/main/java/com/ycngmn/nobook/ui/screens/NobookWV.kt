@@ -88,10 +88,10 @@ fun NobookWebView(
         if (exitScroll) {
             activity?.finish()
         } else {
-            navigator.evaluateJavaScript("backHandlerNB();") {
+            navigator.evaluateJavaScript("typeof window.backHandlerNB === 'function' ? window.backHandlerNB() : 'false';") {
                 val backHandled = it.removeSurrounding("\"")
                 when (backHandled) {
-                    "false" -> {
+                    "false", "null", "" -> {
                         if (navigator.canGoBack) {
                             navigator.navigateBack()
                         } else {
@@ -128,7 +128,7 @@ fun NobookWebView(
     }
 
     var isLoading by rememberSaveable { mutableStateOf(true) }
-    val isError = state.errorsForCurrentRequest.lastOrNull()?.isFromMainFrame == true
+    val isError = state.errorsForCurrentRequest.any { it.isFromMainFrame }
 
     val viewModel: MainViewModel = viewModel {
         MainViewModel(

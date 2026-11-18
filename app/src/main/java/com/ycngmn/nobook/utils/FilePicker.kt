@@ -56,8 +56,9 @@ fun fileChooserWebViewParams(): PlatformWebViewParams {
 
     LaunchedEffect(key1 = fileChooserIntent) {
         fileChooserIntent?.let {
+            fileChooserIntent = null
             try {
-                launcher.launch(fileChooserIntent!!)
+                launcher.launch(it)
             } catch (_: ActivityNotFoundException) {
                 webViewChromeClient.cancelFileChooser()
             }
@@ -82,6 +83,7 @@ private class FileChoosableWebChromeClient(
         filePathCallback: ValueCallback<Array<Uri>>?,
         fileChooserParams: FileChooserParams?,
     ): Boolean {
+        cancelFileChooser()
         this.filePathCallback = filePathCallback
         val filePickerIntent = fileChooserParams?.createIntent()
 

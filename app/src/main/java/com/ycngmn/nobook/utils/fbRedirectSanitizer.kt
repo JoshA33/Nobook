@@ -1,35 +1,35 @@
 package com.ycngmn.nobook.utils
 
-import java.net.URL
+import java.net.URI
 import java.net.URLDecoder
-import java.net.URLEncoder
 
-fun fbRedirectSanitizer(link: String): String {
-    try {
-        var url = URL(link)
+fun isInternalUrl(link: String): Boolean = runCatching {
+    val uri = URI(link)
+    val host = uri.host?.lowercase() ?: return false
+    uri.scheme.equals("https", true) &&
+        host !in setOf("l.facebook.com", "lm.facebook.com") &&
+        (host == "facebook.com" || host.endsWith(".facebook.com") ||
+            host == "messenger.com" || host.endsWith(".messenger.com"))
+}.getOrDefault(false)
 
-        if (url.host == "l.facebook.com" && url.path == "/l.php") {
-            val params = url.query.split("&").associate {
-                val (key, value) = it.split("=", limit = 2)
-                key to URLDecoder.decode(value, "UTF-8")
-            }
-            url = URL(params["u"] ?: return link)
-        }
-
-        val params = url.query?.split("&")
-            ?.filter { !it.startsWith("fbclid=") }
-            ?.joinToString("&") { param ->
-                val (key, value) = param.split("=", limit = 2)
-                "$key=${URLEncoder.encode(value, "UTF-8")}"
-            }
-
-        return buildString {
-            append("${url.protocol}://${url.host}")
-            if (url.port != -1 && url.port != url.defaultPort) append(":${url.port}")
-            append(url.path)
-            if (!params.isNullOrBlank()) append("?").append(params)
-        }
-    } catch (_: Exception) {
-        return link
+fun fbRedirectSanitizer(link: String): String = runCatching {
+    var uri = URI(link)
+    if (uri.host?.lowercase() in setOf("l.facebook.com", "lm.facebook.com") &&
+        uri.path == "/l.php") {
+        val target = uri.rawQuery.orEmpty().split('&')
+            .firstOrNull { it.substringBefore('=') == "u" }
+            ?.substringAfter('=', "") ?: return link
+        uri = URI(URLDecoder.decode(target, "UTF-8"))
     }
-}
+    if (uri.scheme?.lowercase() !in setOf("http", "https") || uri.host == null) return link
+    // Keep existing escaping, valueless parameters, ports and fragments intact.
+    val query = uri.rawQuery?.split('&')?.filterNot {
+        URLDecoder.decode(it.substringBefore('='), "UTF-8") == "fbclid"
+    }?.joinToString("&")
+    buildString {
+        append(uri.scheme).append("://").append(uri.rawAuthority)
+        append(uri.rawPath.orEmpty())
+        if (!query.isNullOrEmpty()) append('?').append(query)
+        uri.rawFragment?.let { append('#').append(it) }
+    }
+}.getOrDefault(link)

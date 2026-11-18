@@ -29,4 +29,13 @@
     <string name="hide_sponsored_ads_from_your_feed">Gesponserte Werbung im Feed ausblenden</string>
     <string name="enable_download_button_on_media_view">Download-Button in Medienansicht aktivieren</string>
     <string name="nobook_settings">Nobook-Einstellungen</string>
+    <string name="copy_to_clipboard_title">In die Zwischenablage kopieren</string>
+    <string name="image_copied_to_clipboard">Bild in die Zwischenablage kopiert</string>
+    <string name="copy_failed_invalid_data">Kopieren fehlgeschlagen: Ungültige Daten</string>
+    <string name="copy_failed_invalid_image">Kopieren fehlgeschlagen: Ungültiges Bild</string>
+    <string name="failed_to_copy_image">Bild konnte nicht kopiert werden</string>
+    <string name="clipboard_not_supported">Zwischenablage wird in dieser Version nicht unterstützt</string>
+    <string name="enable_copy_to_clipboard_button_on_media_view">Schaltfläche zum Kopieren in die Zwischenablage in der Medienansicht aktivieren</string>
+    <string name="not_supported">Nicht unterstützt</string>
+
 </resources>
