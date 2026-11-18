@@ -1,5 +1,15 @@
 # Nobook maintenance build 0.1.2-dev
 
+## Signed fork prerelease 0.1.2
+
+The signed release uses application ID `com.josha33.nobook`, version code 13, and a dedicated RSA release certificate. It is an optimized, non-debuggable release build. It installs separately from the earlier `com.ycngmn.nobook.test` APK and requires a fresh login. The original maintenance test results and issue snapshot below describe the preceding development build; the release is a prerelease pending device testing of the optimized binary. Messenger still requires Desktop layout.
+
+Private signing material is stored locally outside this repository. It must never be committed or uploaded as a release asset. Future APK updates must use the same key.
+
+Release validation: `assembleRelease`, `lintRelease` and the four JVM URL tests passed. The signed APK passed Android signature verification (v1, v2 and v3); the manifest reports `com.josha33.nobook`, version code 13, version 0.1.2, minimum SDK 23, target SDK 36, and no debuggable flag.
+
+Release certificate SHA-256: `46245a685524e6f3c1487a38902919e738d6198abc93693e1abc35cec1bde7bb`.
+
 Based on upstream commit `608296b441d3b98beb15f8504d4768cc89b7566c`. Issue snapshot: November 18, 2026, 88 open reports.
 
 This is an unofficial maintenance build in JoshA33's fork, not a claim that all upstream issues are resolved. No upstream GitHub issues were closed or upstream code changed.
